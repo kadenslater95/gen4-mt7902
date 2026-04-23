@@ -7025,6 +7025,7 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 #if CFG_SUPPORT_CFG_FILE
 
 	struct WIFI_VAR *prWifiVar = &prAdapter->rWifiVar;
+	struct WLAN_CFG_ENTRY *prCfgEntry;
 #if QM_ADAPTIVE_TC_RESOURCE_CTRL
 	struct QUE_MGT *prQM = &prAdapter->rQM;
 #endif
@@ -7683,6 +7684,27 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 	prWifiVar->fgEnArpFilter = (uint32_t) wlanCfgGetUint32(
 					prAdapter, "EnArpFilter",
 					FEATURE_ENABLED);
+
+	if (prAdapter->chip_info &&
+	    prAdapter->chip_info->chip_id == 0x7902) {
+		/*
+		 * MT7902 currently behaves badly with the default
+		 * scan/roam/power-save mix on Linux. Keep explicit config
+		 * untouched, but harden the no-config path for this chip.
+		 */
+		prCfgEntry = wlanCfgGetEntry(prAdapter, "PowerSave", FALSE);
+		if (!prCfgEntry)
+			prWifiVar->ePowerMode = Param_PowerModeCAM;
+
+		prCfgEntry = wlanCfgGetEntry(prAdapter, "DisOnlineScan",
+					     FALSE);
+		if (!prCfgEntry)
+			prWifiVar->fgDisOnlineScan = 1;
+
+		prCfgEntry = wlanCfgGetEntry(prAdapter, "DisRoaming", FALSE);
+		if (!prCfgEntry)
+			prWifiVar->fgDisRoaming = 1;
+	}
 #endif
 
 	/* Driver Flow Control Dequeue Quota. Now is only used by DBDC */
@@ -13850,4 +13872,3 @@ TpeEndFlush:
 	return WLAN_STATUS_PENDING;
 }
 #endif /* CFG_SUPPORT_TPENHANCE_MODE */
-
